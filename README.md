@@ -20,7 +20,7 @@ TLS 1.1 and 1.2 not supported at all:
   Safari 6 for Mac OS X 10.8
 ```
 
-## NOTES:
+## Notes
 
 The result is internally cached so consecutive checks will result in no
 extra remote requests. Simultaneous initial checks will yield an error.
@@ -28,7 +28,7 @@ extra remote requests. Simultaneous initial checks will yield an error.
 If `localStorage` is supported by the client and available the result will
 be cached.
 
-## USAGE:
+## Usage
 
 ```
 TLSChecker.check(function(error, isCompatible) {
@@ -59,5 +59,8 @@ comment, to determine early.
 <!--[if lte IE 7]><script type="text/javascript">window.maybeTLSIncompatible=1;</script><![endif]-->
 ```
 
-It doesn't have any dependencies, but will use [jQuery](http://jquery.com) for the remote request,
-if available.
+## Dependencies
+
+None.
+
+If [jQuery](http://jquery.com) is available it will be used for the remote request.
