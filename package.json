@@ -1,0 +1,23 @@
+{
+  "name": "tls-checker",
+  "version": "0.1.0",
+  "description": "Client-side TLS 1.1 and TLS 1.2 checker by doing a remote request.",
+  "main": "tls-checker.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "minify": "uglifyjs -o tls-checker.min.js --compress --mangle --preamble='/*! TLSChecker v0.1.0 | (c) 2015 Ionata Digital. | ISC license */' -- tls-checker.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@bitbucket.org/ionata/tls-checker.git"
+  },
+  "keywords": [
+    "tls"
+  ],
+  "author": "Evo Stamatov <evo@ionata.com.au>",
+  "license": "ISC",
+  "homepage": "https://bitbucket.org/ionata/tls-checker#readme",
+  "devDependencies": {
+    "uglify-js": "^2.4.24"
+  }
+}
