@@ -67,7 +67,7 @@ If [jQuery](http://jquery.com) is available it will be used for the remote reque
 
 ## Development
 
-If you want to fork this repo and adjust things, make sure to have (`node`)[http://nodejs.org]
+If you want to fork this repo and adjust things, make sure to have [`node`](http://nodejs.org)
 and run `npm install`, then `npm run minify` to produce the minified version as well.
 
 ## License
