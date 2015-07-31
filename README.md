@@ -1,4 +1,4 @@
-# TLSChecker v0.1.0 #
+# TLSChecker v0.1.1 #
 
 Checks for TLS 1.2 or 1.1 client support by doing a remote request to a
 third party server at: https://www.howsmyssl.com/a/check
@@ -50,8 +50,22 @@ regular check.
 
 `TLSChecker.isRunning` will be true if a check is running, false otherwise.
 
+__NOTE:__ The following methods are best used before a check or re-check is fired.
+
 `TLSChecker.setTTL(milliseconds)` will set the localStorage time to live value.
 It defaults to 3 days.
+
+`TLSChecker.useFallbackGetter` forces the use of the non-jQuery getter.
+
+`TLSChecker.useJQueryGetter` reverts the getter to the jQuery one.
+
+__NOTE:__ The following methods can be used after a check so consecutive checks
+won't trigger a remote request.
+
+`TLSChecker.markAsIncompatible` sets compatibility mode and stores it in
+the cache.
+
+`TLSChecker.markAsCompatible` does the opposite of markAsIncompatible().
 
 You can set `window.maybeTLSIncompatible` variable within an IE Conditional
 comment, to determine early.

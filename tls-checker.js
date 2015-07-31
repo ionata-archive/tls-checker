@@ -1,5 +1,5 @@
 /**
- * TLSChecker v0.1.0
+ * TLSChecker v0.1.1
  *
  * Checks for TLS 1.2 or 1.1 client support by doing a remote request to a
  * third party server at: https://www.howsmyssl.com/a/check
@@ -46,8 +46,23 @@
  *
  * TLSChecker.isRunning will be true if a check is running, false otherwise.
  *
+ * NOTE: The following methods are best used before a check or re-check
+ * is fired.
+ *
  * TLSChecker.setTTL(milliseconds) will set the localStorage time to live value.
  * It defaults to 3 days.
+ *
+ * TLSChecker.useFallbackGetter forces the use of the non-jQuery getter.
+ *
+ * TLSChecker.useJQueryGetter reverts the getter to the jQuery one.
+ *
+ * NOTE: The following methods can be used after a check so consecutive checks
+ * won't trigger a remote request.
+ *
+ * TLSChecker.markAsIncompatible sets compatibility mode and stores it in
+ * the cache.
+ *
+ * TLSChecker.markAsCompatible does the opposite of markAsIncompatible().
  *
  * You can set window.maybeTLSIncompatible variable within an IE Conditional
  * comment, to determine early.
@@ -59,74 +74,78 @@
  *
  */
 ;(function(window, document, undefined) {
-  var TLSCheckVersion = '0.1.0';
+  var TLSCheckVersion = '0.1.1';
 
   var callbackname = 'tls'+(function(N){return Array(N+1).join((Math.random().toString(36)+'00000000000000000').slice(2,18)).slice(0,N);})(10);
-  if ('jQuery' in window) {
-    // Use jQuery
-    var getter = function(url, callback) {
-      jQuery.get(url)
-          .done(function(data) {
-            callback(null, data);
-          })
-          .fail(function(jqXHR, textStatus, errorThrown) {
-            var error = new Error(errorThrown);
-            error.name = textStatus;
-            callback(error);
-          });
+
+  var jQueryGetter = function(url, callback) {
+    jQuery.get(url)
+    .done(function(data) {
+      callback(null, data);
+    })
+    .fail(function(jqXHR, textStatus, errorThrown) {
+      var error = new Error(errorThrown);
+      error.name = textStatus;
+      callback(error);
+    });
+  };
+
+  var fallbackGetter = function(url, callback) {
+    // Fallback to script tag hack -- taken from jQuery :)
+    var id = 'tls-ajax-getter',
+        head = document.head || document.documentElement,
+        script = document.getElementById(id),
+        didFireCallback = false;
+
+    if (script) {
+      head.removeChild(script);
+    }
+
+    script = document.createElement('script');
+
+    window[callbackname] = function(data) {
+      didFireCallback = true;
+      callback(null, data);
+      window[callbackname] = null;
     };
-  } else {
-    // Fallback to script tag hack
-    var getter = function(url, callback) {
-      // taken from jQuery :)
-      var id = 'tls-ajax-getter',
-          head = document.head || document.documentElement,
-          script = document.getElementById(id),
-          didFireCallback = false;
 
-      if (script) {
-        head.removeChild(script);
-      }
+    script.async = true;
+    script.id = id;
+    script.src = url + '?callback=' + callbackname;
 
-      script = document.createElement('script');
+    script.onload = script.onreadystatechange = function(_, isAbort) {
+      if (isAbort || !script.readyState || /loaded|complete/.test(script.readyState)) {
+        script.onload = script.onreadystatechange = null;
 
-      window[callbackname] = function(data) {
-        didFireCallback = true;
-        callback(null, data);
-        window[callbackname] = null;
-      };
-
-      script.async = true;
-      script.id = id;
-      script.src = url + '?callback=' + callbackname;
-
-      script.onload = script.onreadystatechange = function(_, isAbort) {
-        if (isAbort || !script.readyState || /loaded|complete/.test(script.readyState)) {
-          script.onload = script.onreadystatechange = null;
-
-          if (script.parentNode) {
-            script.parentNode.removeChild(script);
-          }
-
-          script = null;
-
-          if (! didFireCallback && ! isAbort) {
-            var error = new Error('TLS server error');
-            error.name = 'tls-server-error';
-            callback(error);
-          }
+        if (script.parentNode) {
+          script.parentNode.removeChild(script);
         }
-      };
 
-      script.onerror = function() {
-        script.onload(undefined, true);
-        var error = new Error('JSONP load error');
-        error.name = 'jsonp-error';
-        callback(error);
-      };
+        script = null;
 
-      head.insertBefore(script, head.firstChild);
+        if (! didFireCallback && ! isAbort) {
+          var error = new Error('TLS server error');
+          error.name = 'tls-server-error';
+          callback(error);
+        }
+      }
     };
+
+    script.onerror = function() {
+      script.onload(undefined, true);
+      var error = new Error('JSONP load error');
+      error.name = 'jsonp-error';
+      callback(error);
+    };
+
+    head.insertBefore(script, head.firstChild);
+  };
+
+  var getter;
+  if ('jQuery' in window) {
+    getter = jQueryGetter;
+  } else {
+    getter = fallbackGetter;
   }
 
   var url = 'https://www.howsmyssl.com/a/check';
@@ -218,13 +237,7 @@
         if (error) {
           isError = error;
         } else {
-          isCompatible = isTLSCompatible(TLSData, approvedTLSVersions);
-
-          if (checkLocalStorageSupport()) {
-            var now = +(new Date());
-            var value = (isCompatible ? 'y' : 'n') + now;
-            localStorage.setItem('isTLSCompatible', value);
-          }
+          TLSMarkAs(isTLSCompatible(TLSData, approvedTLSVersions));
         }
 
         setTimeout(function() { callback(isError, isCompatible); });
@@ -244,6 +257,16 @@
     TLSCheck(callback);
   }
 
+  function TLSMarkAs(compatible) {
+    isCompatible = !!compatible;
+
+    if (checkLocalStorageSupport()) {
+      var now = +(new Date());
+      var value = (isCompatible ? 'y' : 'n') + now;
+      localStorage.setItem('isTLSCompatible', value);
+    }
+  }
+
   function TLSNoCompat() {
     if (typeof TLSChecker_ != "undefined") {
       window.TLSChecker = TLSChecker_;
@@ -261,6 +284,10 @@
         noCompat:  TLSNoCompat,
         isRunning: function() { return isRunning; },
         setTTL:    function(ttl) { timeToLive = parseInt(ttl, 10); },
+        markAsIncompatible: function() { TLSMarkAs(false); },
+        markAsCompatible:   function() { TLSMarkAs(true); },
+        useFallbackGetter: function() { getter = fallbackGetter; },
+        useJQueryGetter:   function() { getter = jQueryGetter; }
       };
 
   /* DEBUG ONLY
