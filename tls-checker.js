@@ -61,6 +61,7 @@
 ;(function(window, document, undefined) {
   var TLSCheckVersion = '0.1.0';
 
+  var callbackname = 'tls'+(function(N){return Array(N+1).join((Math.random().toString(36)+'00000000000000000').slice(2,18)).slice(0,N);})(10);
   if ('jQuery' in window) {
     // Use jQuery
     var getter = function(url, callback) {
@@ -89,7 +90,6 @@
 
       script = document.createElement('script');
 
-      var callbackname = 'tls'+(function(N){return Array(N+1).join((Math.random().toString(36)+'00000000000000000').slice(2,18)).slice(0,N);})(10);
       window[callbackname] = function(data) {
         didFireCallback = true;
         callback(null, data);
@@ -152,8 +152,12 @@
 
     doesSupportLocalStorage = false;
     try {
-      doesSupportLocalStorage = 'localStorage' in window && window['localStorage'] !== null;
-    } catch (e) { }
+      if ('localStorage' in window && window['localStorage'] !== null) {
+        localStorage.setItem(callbackname, 'test');
+        doesSupportLocalStorage = localStorage.getItem(callbackname) === 'test';
+        localStorage.removeItem(callbackname);
+      }
+    } catch (e) {}
 
     return doesSupportLocalStorage;
   }
